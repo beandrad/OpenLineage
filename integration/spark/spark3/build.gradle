@@ -45,6 +45,7 @@ ext {
     jacksonVersion = '2.10.0'
     lombokVersion = '1.18.26'
     bigqueryVersion = "0.29.0"
+    sparkxmlVersion = "0.12.0"
 }
 
 dependencies {
@@ -67,6 +68,7 @@ dependencies {
     compileOnly "org.apache.iceberg:iceberg-spark3-runtime:0.12.1"
     compileOnly "io.delta:delta-core_2.12:1.0.0"
     compileOnly "com.databricks:dbutils-api_2.12:0.0.6"
+    compileOnly "com.databricks:spark-xml_2.12:${sparkxmlVersion}"
 
     testFixturesApi "com.fasterxml.jackson.module:jackson-module-scala_2.12:${jacksonVersion}"
     testFixturesApi "org.apache.spark:spark-core_2.12:${sparkVersion}"

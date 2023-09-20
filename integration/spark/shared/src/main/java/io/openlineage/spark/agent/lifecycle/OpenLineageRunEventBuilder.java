@@ -351,6 +351,11 @@ class OpenLineageRunEventBuilder {
       Map<String, DatasetFacets> datasetFacetsMap = new HashMap<>();
       nodes.forEach(
           event -> inputDatasetFacetBuilders.forEach(fn -> fn.accept(event, inputFacetsMap::put)));
+      
+      for (InputDataset dataset :datasets) {
+        log.debug("Input dataset {}", dataset.getName());
+      }
+
       return datasets.stream()
           .map(
               ds ->

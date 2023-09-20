@@ -33,6 +33,7 @@ public class LogicalRDDVisitor<D extends OpenLineage.Dataset>
 
   @Override
   public boolean isDefinedAt(LogicalPlan x) {
+    log.info("isDefinedAt LogicalPlan {}", x.getClass().getName());
     return x instanceof LogicalRDD && !Rdds.findFileLikeRdds(((LogicalRDD) x).rdd()).isEmpty();
   }
 

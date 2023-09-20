@@ -16,12 +16,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.catalyst.expressions.ExprId;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.NamedExpression;
+import org.apache.spark.sql.catalyst.expressions.Attribute;
+import org.apache.spark.sql.catalyst.expressions.AttributeReference;
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression;
 import org.apache.spark.sql.catalyst.plans.logical.Aggregate;
+import org.apache.spark.sql.catalyst.plans.logical.Generate;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.Project;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
+import org.apache.hadoop.hive.ql.optimizer.lineage.Generator;
+import org.apache.spark.sql.catalyst.expressions.Explode;
+import org.apache.spark.sql.catalyst.expressions.GetStructField;
+
+import com.databricks.spark.xml.XmlRelation;
 
 /**
  * Traverses LogicalPlan and collects dependencies between the expressions and operations used
@@ -54,7 +62,53 @@ public class ExpressionDependencyCollector {
             if (((LogicalRelation) node).relation() instanceof JDBCRelation) {
               JdbcColumnLineageCollector.extractExpressionsFromJDBC(node, builder);
             }
+            if (((LogicalRelation) node).relation() instanceof XmlRelation) {
+              log.info("Node is XmlRelation {}", node.toJSON());
+            }
+          } else if (node instanceof Generate) {
+            log.info("Node generate {}", ((Generate) node).toJSON());
+            log.info("Node generate expressions {}", ((Generate) node).expressions());
+            log.info("Node generate generator {}", ((Generate) node).generator());
+            log.info("Node generate outputs {}", ((Generate) node).generatorOutput());
+            List<Expression> nodeExprs = ScalaConversionUtils.<Expression>fromSeq(
+              ((Generate) node).expressions());
+            for (Expression expr : nodeExprs) {
+              log.info("Node generate expression {}", expr.getClass().getName());
+            }
+            // nodeExprs.stream()
+            //     .filter(expr -> expr instanceof AttributeReference)
+            //     .forEach(expr -> traverseExpression((Expression) expr, ((NamedExpression)expr).exprId(), builder));
+
+            List<Attribute> generatorOutputs = ScalaConversionUtils.<Attribute>fromSeq(
+                  ((Generate) node).generatorOutput());
+            for (Attribute generatorOutput : generatorOutputs) {
+              for (Expression generatorInput : nodeExprs) {
+                if (generatorInput instanceof Explode) {
+                  log.info("explode child {}", ((Explode) generatorInput).child());
+                  Expression inputChild = ((Explode) generatorInput).child();
+                  if (inputChild instanceof NamedExpression) {
+                    log.info("call add dependency {} {}", ((NamedExpression)generatorOutput).exprId(), ((NamedExpression)((Explode) generatorInput).child()).exprId());
+                    builder.addDependency(((NamedExpression)generatorOutput).exprId(), ((NamedExpression)((Explode) generatorInput).child()).exprId());
+                  } if (inputChild instanceof GetStructField) {
+                    Expression inputExpr = getLastChild(inputChild);
+                    if (inputExpr instanceof NamedExpression) {
+                      log.info("call add dependency {} {}", ((NamedExpression)generatorOutput).exprId(), ((NamedExpression)inputExpr).exprId());
+                      builder.addDependency(((NamedExpression)generatorOutput).exprId(), ((NamedExpression)inputExpr).exprId());
+                    }
+                  }
+                  else {
+                    log.info("input child is not named expression {} {}", inputChild.getClass().getName(), inputChild);
+                  }
+                }
+              }
+            }
+            // attributes.addAll(
+            //     ScalaConversionUtils.<Attribute>fromSeq(
+            //         ((Generate) node).generatorOutput()));
+            // Generator generator = (Generator) ((Generate) node).generator();
           }
+
+          // TODO: add support to UDF expression: Generate explode
 
           expressions.stream()
               .forEach(expr -> traverseExpression((Expression) expr, expr.exprId(), builder));
@@ -62,8 +116,17 @@ public class ExpressionDependencyCollector {
         });
   }
 
+  // get last child of GetStructField
+  private static Expression getLastChild(Expression expr) {
+    if (expr instanceof GetStructField) {
+      return getLastChild(((GetStructField) expr).child());
+    }
+    return expr;
+  }
+
   public static void traverseExpression(
       Expression expr, ExprId ancestorId, ColumnLevelLineageBuilder builder) {
+    
     if (expr instanceof NamedExpression && !((NamedExpression) expr).exprId().equals(ancestorId)) {
       builder.addDependency(ancestorId, ((NamedExpression) expr).exprId());
     }

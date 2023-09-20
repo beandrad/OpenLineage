@@ -24,6 +24,8 @@ import io.openlineage.spark.agent.facets.builder.SparkVersionFacetBuilder;
 import io.openlineage.spark.api.CustomFacetBuilder;
 import io.openlineage.spark.api.OpenLineageContext;
 import io.openlineage.spark.api.OpenLineageEventHandlerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -45,6 +47,8 @@ import scala.PartialFunction;
  * @see ServiceLoader documentation for guidance on implementing an {@link
  *     OpenLineageEventHandlerFactory}
  */
+
+ @Slf4j
 class InternalEventHandlerFactory implements OpenLineageEventHandlerFactory {
 
   private final List<OpenLineageEventHandlerFactory> eventHandlerFactories;
@@ -84,6 +88,7 @@ class InternalEventHandlerFactory implements OpenLineageEventHandlerFactory {
   @Override
   public Collection<PartialFunction<LogicalPlan, List<InputDataset>>>
       createInputDatasetQueryPlanVisitors(OpenLineageContext context) {
+    log.debug("Creating input dataset query plan visitors");
     List<PartialFunction<LogicalPlan, List<InputDataset>>> inputDatasets =
         visitorFactory.getInputVisitors(context);
 

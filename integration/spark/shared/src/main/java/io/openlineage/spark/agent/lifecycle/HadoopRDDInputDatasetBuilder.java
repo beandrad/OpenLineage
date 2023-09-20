@@ -33,6 +33,7 @@ public class HadoopRDDInputDatasetBuilder extends AbstractInputDatasetBuilder<RD
 
   @Override
   public boolean isDefinedAt(RDD<?> x) {
+    log.debug("Checking if HadoopRDDInputDatasetBuilder is defined for {}", x.getClass().getName());
     return x instanceof HadoopRDD || x instanceof NewHadoopRDD;
   }
 

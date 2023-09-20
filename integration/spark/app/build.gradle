@@ -57,6 +57,7 @@ ext {
     mockitoVersion = '3.11.2'
     testcontainersVersion = '1.17.6'
     shortVersion = sparkVersion.substring(0,3)
+    sparkxmlVersion = '0.12.0'
 
     versionsMap = [
             "3.3": ["module": "spark33", "scala": "2.12", "delta": "2.1.0", "gcs": "hadoop3-2.2.9", "snowflake": "2.11.0-spark_3.3", "iceberg": "iceberg-spark-runtime-3.3_2.12:0.14.0", "hadoopclient": "3.3.4"],
@@ -105,6 +106,8 @@ dependencies {
         exclude group: 'org.apache.spark:spark-catalyst_2.11'
     }
 
+    compileOnly "com.databricks:spark-xml_${versions.scala}:${sparkxmlVersion}"
+
     testFixturesApi "org.apache.spark:spark-core_${versions.scala}:${sparkVersion}"
     testFixturesApi "org.apache.spark:spark-sql_${versions.scala}:${sparkVersion}"
     testFixturesApi "org.apache.spark:spark-hive_${versions.scala}:${sparkVersion}"
@@ -132,6 +135,7 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.dataformat'
         exclude group: 'org.mock-server.mockserver-client-java'
     }
+    compileOnly "com.databricks:spark-xml_${versions.scala}:${sparkxmlVersion}"
 
     pysparkContainerOnly("com.google.cloud.bigdataoss:gcs-connector:${versions.gcs}:shaded"){
         exclude group: 'com.google.guava', module: 'guava'

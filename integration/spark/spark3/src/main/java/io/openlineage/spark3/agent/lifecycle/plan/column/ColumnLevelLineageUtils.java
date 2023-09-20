@@ -40,6 +40,8 @@ public class ColumnLevelLineageUtils {
     collectInputsAndExpressionDependencies(context, plan, builder);
     OutputFieldsCollector.collect(plan, builder);
 
+    log.info("Extracted fields: {}", builder.toString());
+
     OpenLineage.ColumnLineageDatasetFacetBuilder facetBuilder =
         context.getOpenLineage().newColumnLineageDatasetFacetBuilder();
 

@@ -13,6 +13,8 @@ import io.openlineage.spark.agent.util.PlanUtils;
 import io.openlineage.spark.api.AbstractQueryPlanDatasetBuilder;
 import io.openlineage.spark.api.DatasetFactory;
 import io.openlineage.spark.api.OpenLineageContext;
+
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +30,9 @@ import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
+
+import com.databricks.spark.xml.XmlRelation;
+
 import scala.collection.JavaConversions;
 
 /**
@@ -77,6 +82,7 @@ public class LogicalRelationDatasetBuilder<D extends OpenLineage.Dataset>
     return x instanceof LogicalRelation
         && (((LogicalRelation) x).relation() instanceof HadoopFsRelation
             || ((LogicalRelation) x).relation() instanceof JDBCRelation
+            || ((LogicalRelation) x).relation() instanceof XmlRelation
             || ((LogicalRelation) x).catalogTable().isDefined());
   }
 
@@ -97,6 +103,9 @@ public class LogicalRelationDatasetBuilder<D extends OpenLineage.Dataset>
       return handleHadoopFsRelation(logRel);
     } else if (logRel.relation() instanceof JDBCRelation) {
       return new JdbcRelationHandler<>(datasetFactory).handleRelation(logRel);
+    } else if (logRel.relation() instanceof XmlRelation) {
+      log.info("handleXmlRelation");
+      return handleXmlRelation(logRel);
     }
     throw new IllegalArgumentException(
         "Expected logical plan to be either HadoopFsRelation, JDBCRelation, "
@@ -181,6 +190,30 @@ public class LogicalRelationDatasetBuilder<D extends OpenLineage.Dataset>
         throw e;
       }
     }
+  }
+
+  private List<D> handleXmlRelation(LogicalRelation logRel) {
+    XmlRelation xmlRelation = (XmlRelation) logRel.relation();
+
+    if (xmlRelation.location() == null) {
+      return Collections.emptyList();
+    }
+    java.nio.file.Path path = Paths.get(xmlRelation.location().get());
+    DatasetIdentifier di = new DatasetIdentifier(xmlRelation.location().get(), PlanUtils.namespaceUri(path.toUri()));
+
+    OpenLineage.DatasetFacetsBuilder datasetFacetsBuilder =
+        context.getOpenLineage().newDatasetFacetsBuilder();
+    datasetFacetsBuilder.schema(PlanUtils.schemaFacet(context.getOpenLineage(), logRel.schema()));
+    datasetFacetsBuilder.dataSource(
+        PlanUtils.datasourceFacet(context.getOpenLineage(), di.getNamespace()));
+
+    getDatasetVersion(logRel)
+        .map(
+            version ->
+                datasetFacetsBuilder.version(
+                    context.getOpenLineage().newDatasetVersionDatasetFacet(version)));
+
+    return Collections.singletonList(datasetFactory.getDataset(di, datasetFacetsBuilder));
   }
 
   protected Optional<String> getDatasetVersion(LogicalRelation x) {

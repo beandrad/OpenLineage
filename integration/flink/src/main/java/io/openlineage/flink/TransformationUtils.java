@@ -25,6 +25,7 @@ public class TransformationUtils {
   public List<SinkLineage> convertToVisitable(List<Transformation<?>> transformations) {
     List<SinkLineage> lineages = new ArrayList<>();
     for (Transformation<?> transformation : transformations) {
+      log.info("Transformation {}", transformation);
       var sinkLineage = processSink(transformation);
       sinkLineage.ifPresent(lineages::add);
     }

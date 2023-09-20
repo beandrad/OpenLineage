@@ -61,6 +61,7 @@ public class ColumnLevelLineageBuilder {
    * @param attributeName
    */
   public void addInput(ExprId exprId, DatasetIdentifier datasetIdentifier, String attributeName) {
+    log.info("Add input {} {}", datasetIdentifier.toString(), attributeName);
     inputs
         .computeIfAbsent(exprId, k -> new LinkedList<>())
         .add(Pair.of(datasetIdentifier, attributeName));
@@ -87,6 +88,7 @@ public class ColumnLevelLineageBuilder {
    * @param child
    */
   public void addDependency(ExprId parent, ExprId child) {
+    log.info("addDependency parent {} child {}", parent, child);
     exprDependencies.computeIfAbsent(parent, k -> new HashSet<>()).add(child);
   }
 
@@ -136,9 +138,9 @@ public class ColumnLevelLineageBuilder {
    * @return
    */
   public ColumnLineageDatasetFacetFields build() {
+    log.info("input: {}", inputs.toString());
     OpenLineage.ColumnLineageDatasetFacetFieldsBuilder fieldsBuilder =
         context.getOpenLineage().newColumnLineageDatasetFacetFieldsBuilder();
-
     schema.getFields().stream()
         .map(field -> Pair.of(field, getInputsUsedFor(field.getName())))
         .filter(pair -> !pair.getRight().isEmpty())
@@ -158,6 +160,7 @@ public class ColumnLevelLineageBuilder {
 
   private List<OpenLineage.ColumnLineageDatasetFacetFieldsAdditionalInputFields> facetInputFields(
       List<Pair<DatasetIdentifier, String>> inputFields) {
+    log.info("facetInputFields: {}", inputFields.toString());
     return inputFields.stream()
         .map(
             field ->
@@ -170,6 +173,7 @@ public class ColumnLevelLineageBuilder {
   }
 
   List<Pair<DatasetIdentifier, String>> getInputsUsedFor(String outputName) {
+    log.info("outputName: {}", outputName);
     Optional<OpenLineage.SchemaDatasetFacetFields> outputField =
         schema.getFields().stream()
             .filter(field -> field.getName().equalsIgnoreCase(outputName))
@@ -179,15 +183,20 @@ public class ColumnLevelLineageBuilder {
       return Collections.emptyList();
     }
 
-    return findDependentInputs(outputs.get(outputField.get())).stream()
-        .filter(inputExprId -> inputs.containsKey(inputExprId))
-        .flatMap(inputExprId -> inputs.get(inputExprId).stream())
-        .filter(Objects::nonNull)
-        .distinct()
-        .collect(Collectors.toList());
+    List<Pair<DatasetIdentifier, String>> inputsUsedFor = findDependentInputs(outputs.get(outputField.get())).stream()
+      .filter(inputExprId -> inputs.containsKey(inputExprId))
+      .flatMap(inputExprId -> inputs.get(inputExprId).stream())
+      .filter(Objects::nonNull)
+      .distinct()
+      .collect(Collectors.toList());
+    
+    log.info("inputsUsedFor: {}", inputsUsedFor.toString());
+
+    return inputsUsedFor;
   }
 
   private List<ExprId> findDependentInputs(ExprId outputExprId) {
+    log.info("outputExprId: {}", outputExprId.toString());
     List<ExprId> dependentInputs = new LinkedList<>();
     dependentInputs.add(outputExprId);
     boolean continueSearch = true;
@@ -204,7 +213,7 @@ public class ColumnLevelLineageBuilder {
       dependentInputs.addAll(newDependentInputs);
       continueSearch = !newDependentInputs.isEmpty();
     }
-
+    log.info("dependentInputs: {}", dependentInputs.toString());
     return dependentInputs;
   }
 

@@ -6,6 +6,8 @@
 package io.openlineage.spark3.agent.lifecycle.plan.column;
 
 import io.openlineage.spark.agent.util.ScalaConversionUtils;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.catalyst.expressions.Attribute;
@@ -15,9 +17,11 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.Project;
 
 /** Class created to collect output fields with the corresponding ExprId from LogicalPlan. */
+@Slf4j
 class OutputFieldsCollector {
 
   static void collect(LogicalPlan plan, ColumnLevelLineageBuilder builder) {
+    log.debug("Collecting outputs from plan: {}", plan);
     getOutputExpressionsFromRoot(plan).stream()
         .forEach(expr -> builder.addOutput(expr.exprId(), expr.name()));
     CustomCollectorsUtils.collectOutputs(plan, builder);

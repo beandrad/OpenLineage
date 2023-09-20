@@ -14,11 +14,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.LogicalRDD;
 import org.apache.spark.sql.execution.SQLExecutionRDD;
 
+@Slf4j
 public class SqlExecutionRDDVisitor extends AbstractRDDNodeVisitor<LogicalRDD, InputDataset> {
 
   public SqlExecutionRDDVisitor(@NonNull OpenLineageContext context) {
@@ -40,6 +43,7 @@ public class SqlExecutionRDDVisitor extends AbstractRDDNodeVisitor<LogicalRDD, I
 
   @Override
   public List<InputDataset> apply(LogicalPlan x) {
+    log.info("LogicalPlan {}", x.toString());
     return findInputDatasets(Rdds.findFileLikeRdds(((LogicalRDD) x).rdd()), x.schema());
   }
 }

@@ -13,6 +13,8 @@ import io.openlineage.spark.api.QueryPlanVisitor;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.spark.rdd.HadoopRDD;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
@@ -27,6 +29,7 @@ import org.apache.spark.sql.types.StructType;
  * @param <T>
  * @param <D>
  */
+@Slf4j
 public abstract class AbstractRDDNodeVisitor<T extends LogicalPlan, D extends OpenLineage.Dataset>
     extends QueryPlanVisitor<T, D> {
 
@@ -39,6 +42,7 @@ public abstract class AbstractRDDNodeVisitor<T extends LogicalPlan, D extends Op
   }
 
   protected List<D> findInputDatasets(List<RDD<?>> fileRdds, StructType schema) {
+    log.info("findInputDatasets {}", fileRdds.toString());
     return PlanUtils.findRDDPaths(fileRdds).stream()
         .map(
             p -> {

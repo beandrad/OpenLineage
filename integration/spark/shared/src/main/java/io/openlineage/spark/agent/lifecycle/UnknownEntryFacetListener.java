@@ -68,14 +68,16 @@ public class UnknownEntryFacetListener implements Consumer<LogicalPlan> {
   }
 
   private Optional<UnknownEntryFacet.FacetEntry> mapEntry(LogicalPlan x) {
-    if (visitedNodes.containsKey(x)) {
-      log.debug("Node was visited - ignoring {}", x);
-      return Optional.empty();
-    }
+    // if (visitedNodes.containsKey(x)) {
+    //   log.debug("Node was visited - ignoring {}", x);
+    //   return Optional.empty();
+    // }
     List<UnknownEntryFacet.AttributeField> output = attributeFields(x.outputSet());
     List<UnknownEntryFacet.AttributeField> input = attributeFields(x.inputSet());
     String serializedNode = planSerializer.serialize(x);
-    log.debug("Adding serialized node for unknown facet entry {}", serializedNode);
+    // log.debug("Adding serialized node for unknown facet entry {}", serializedNode);
+    // log.debug("Map entry input {}", input.toString());
+    // log.debug("Map entry output {}", output.toString());
     return Optional.of(new UnknownEntryFacet.FacetEntry(serializedNode, input, output));
   }
 

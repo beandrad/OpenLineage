@@ -7,17 +7,6 @@ package io.openlineage.spark3.agent.lifecycle.plan.column;
 
 import static io.openlineage.spark.agent.util.ReflectionUtils.tryExecuteMethod;
 
-import com.google.cloud.spark.bigquery.BigQueryRelation;
-import io.openlineage.spark.agent.lifecycle.Rdds;
-import io.openlineage.spark.agent.util.BigQueryUtils;
-import io.openlineage.spark.agent.util.DatasetIdentifier;
-import io.openlineage.spark.agent.util.JdbcUtils;
-import io.openlineage.spark.agent.util.PlanUtils;
-import io.openlineage.spark.agent.util.ReflectionUtils;
-import io.openlineage.spark.agent.util.ScalaConversionUtils;
-import io.openlineage.spark.api.OpenLineageContext;
-import io.openlineage.spark3.agent.utils.PlanUtils3;
-import io.openlineage.sql.SqlMeta;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.file.Paths;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
@@ -43,6 +33,21 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation;
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation;
+
+import com.databricks.spark.xml.XmlRelation;
+import com.google.cloud.spark.bigquery.BigQueryRelation;
+
+import io.openlineage.spark.agent.lifecycle.Rdds;
+import io.openlineage.spark.agent.util.BigQueryUtils;
+import io.openlineage.spark.agent.util.DatasetIdentifier;
+import io.openlineage.spark.agent.util.JdbcUtils;
+import io.openlineage.spark.agent.util.PlanUtils;
+import io.openlineage.spark.agent.util.ReflectionUtils;
+import io.openlineage.spark.agent.util.ScalaConversionUtils;
+import io.openlineage.spark.api.OpenLineageContext;
+import io.openlineage.spark3.agent.utils.PlanUtils3;
+import io.openlineage.sql.SqlMeta;
+import lombok.extern.slf4j.Slf4j;
 import scala.collection.JavaConversions;
 
 /** Traverses LogicalPlan and collect input fields with the corresponding ExprId. */
@@ -68,6 +73,7 @@ class InputFieldsCollector {
   private static void discoverInputsFromNode(
       OpenLineageContext context, LogicalPlan node, ColumnLevelLineageBuilder builder) {
     List<DatasetIdentifier> datasetIdentifiers = extractDatasetIdentifier(context, node);
+
     if (isJDBCNode(node)) {
       JdbcColumnLineageCollector.extractExternalInputs(node, builder, datasetIdentifiers);
     } else {
@@ -120,6 +126,10 @@ class InputFieldsCollector {
         && ((LogicalRelation) node).relation() instanceof JDBCRelation) {
       JDBCRelation relation = (JDBCRelation) ((LogicalRelation) node).relation();
       return extractDatasetIdentifier(relation);
+    } else if (node instanceof LogicalRelation
+        && ((LogicalRelation) node).relation() instanceof XmlRelation) {
+      XmlRelation relation = (XmlRelation) ((LogicalRelation) node).relation();
+      return extractDatasetIdentifier(relation);
     } else if (node instanceof LogicalRDD) {
       return extractDatasetIdentifier((LogicalRDD) node);
     } else if (node instanceof InMemoryRelation) {
@@ -152,6 +162,14 @@ class InputFieldsCollector {
             path ->
                 new DatasetIdentifier(path.toUri().getPath(), PlanUtils.namespaceUri(path.toUri())))
         .collect(Collectors.toList());
+  }
+
+  private static List<DatasetIdentifier> extractDatasetIdentifier(XmlRelation xmlRelation) {
+    if (xmlRelation.location() == null) {
+      return Collections.emptyList();
+    }
+    java.nio.file.Path path = Paths.get(xmlRelation.location().get());
+    return Collections.singletonList(new DatasetIdentifier(xmlRelation.location().get(), PlanUtils.namespaceUri(path.toUri())));
   }
 
   private static List<DatasetIdentifier> extractDatasetIdentifier(

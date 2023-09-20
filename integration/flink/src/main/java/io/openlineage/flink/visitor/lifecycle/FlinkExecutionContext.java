@@ -75,6 +75,7 @@ public class FlinkExecutionContext implements ExecutionContext {
   }
 
   public OpenLineage.RunEventBuilder buildEventForEventType(EventType eventType) {
+    log.info("buildEventForEventType: {}", eventType.toString());
     TransformationUtils converter = new TransformationUtils();
     List<SinkLineage> sinkLineages = converter.convertToVisitable(transformations);
 
@@ -83,6 +84,7 @@ public class FlinkExecutionContext implements ExecutionContext {
     List<OpenLineage.OutputDataset> outputDatasets = new ArrayList<>();
 
     for (var lineage : sinkLineages) {
+      log.info("Sink lineage: {}", lineage);
       inputDatasets.addAll(getInputDatasets(visitorFactory, lineage.getSources()));
       outputDatasets.addAll(getOutputDatasets(visitorFactory, lineage.getSink()));
     }
